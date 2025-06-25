@@ -1,9 +1,12 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
     private Rigidbody2D _rb;
+    private Animator _animator;
+    private SpriteRenderer _sprite;
     private Vector2 _moveInput = Vector2.zero;
     [SerializeField] private float maxSpeed = 10;
     [SerializeField] private float acceleration = 50f;
@@ -22,6 +25,8 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         _rb = GetComponent<Rigidbody2D>();
+        _animator = GetComponent<Animator>();
+        _sprite = GetComponent<SpriteRenderer>();
     }
 
     // Update is called once per frame
@@ -39,12 +44,31 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
+        // TODO: fix getting stuck on walls due to collision. the player should slide down walls.
         float targetSpeed = _moveInput.x * maxSpeed;
         float speedDiff = targetSpeed - _rb.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
         float movement = accelRate * speedDiff * Time.fixedDeltaTime;
 
         _rb.linearVelocity = new Vector2(_rb.linearVelocity.x + movement, _rb.linearVelocity.y);
+        string animationState = (_moveInput.x, IsGrounded()) switch
+        {
+            (_, false) => "player_jump",
+            (0.0f, _) => "player_idle",
+            (> 0.0f or < 0.0f, _) => "player_run",
+            _ => "player_idle"
+        };
+        _animator.Play(animationState);
+
+        switch(_moveInput.x)
+        {
+            case (< 0.0f):
+                _sprite.flipX = true;
+                break;
+            case (> 0.0f):
+                _sprite.flipX = false;
+                break;
+        }
     }
 
     public void OnMove(InputAction.CallbackContext context)
